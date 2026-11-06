@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+            cxx: g++
+            werror: ON
+          - os: ubuntu-latest
+            compiler: clang
+            cxx: clang++
+            werror: ON
+          - os: macos-latest
+            compiler: apple-clang
+            cxx: clang++
+            werror: ON
+          - os: windows-latest
+            compiler: msvc
+            cxx: cl
+            werror: OFF
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+          -DMANDELBROT_WARNINGS_AS_ERRORS=${{ matrix.werror }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure
